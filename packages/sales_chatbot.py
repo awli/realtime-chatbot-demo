@@ -37,6 +37,7 @@ Remember to be helpful and courteous at all times, and prioritize the customer's
 Answer in exactly 1 sentence, no more. Do not use more than 20 words. Only directly answer questions that have been asked. Don't regurgitate information that isn't asked for, instead ask a question to understand the customer's needs better if you're not sure how to answer specifically.
 """
 
+
 class SalesChatbot:
     def __init__(self):
         self.conversation_history = [
@@ -47,8 +48,7 @@ class SalesChatbot:
         self.conversation_history.append({"role": "user", "content": user_input})
 
         response = client.chat.completions.create(
-            model="gpt-4",
-            messages=self.conversation_history
+            model="gpt-4", messages=self.conversation_history
         )
 
         ai_response = response.choices[0].message.content

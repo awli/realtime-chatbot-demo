@@ -13,12 +13,11 @@ ELEVENLABS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # Default voice, you can change th
 
 client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
+
 def speak(text):
     try:
         audio = client.generate(
-            text=text,
-            voice=ELEVENLABS_VOICE_ID,
-            model="eleven_monolingual_v1"
+            text=text, voice=ELEVENLABS_VOICE_ID, model="eleven_monolingual_v1"
         )
         play(audio)
     except Exception as e:
