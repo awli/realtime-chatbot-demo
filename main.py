@@ -14,41 +14,43 @@ SAMPLE_RATE = 16000
 CHUNK_SIZE = 160  # ms
 WAIT_TIME = 500  # ms
 
-transcriber = StreamingTranscription()
-chatbot = SalesChatbot()
 
-state = {
-    "last_text": "",
-    "silence_duration": 0,
-}
+def build_stream_callback():
+    transcriber = StreamingTranscription()
+    chatbot = SalesChatbot()
+    state = {
+        "last_text": "",
+        "silence_duration": 0,
+    }
 
+    def callback(in_data, *_):
+        signal = np.frombuffer(in_data, dtype=np.int16)
+        text = transcriber.transcribe_chunk(signal)
 
-def callback(in_data, *_):
-    signal = np.frombuffer(in_data, dtype=np.int16)
-    text = transcriber.transcribe_chunk(signal)
+        if text != state["last_text"]:
+            state["last_text"] = text
+            state["silence_duration"] = 0
+        else:
+            state["silence_duration"] += CHUNK_SIZE / 2
 
-    if text != state["last_text"]:
-        state["last_text"] = text
-        state["silence_duration"] = 0
-    else:
-        state["silence_duration"] += CHUNK_SIZE / 2
+            # Check if the user said anything and at least WAIT_TIME has since passed
+            if state["silence_duration"] >= WAIT_TIME and len(state["last_text"]) > 0:
+                print(f"USER: {state['last_text']}")
+                # Generate response using the chatbot
+                ai_response = chatbot.generate_response(state["last_text"])
+                print(f"AI: {ai_response}")
 
-        # Check if the user said anything and at least WAIT_TIME has since passed
-        if state["silence_duration"] >= WAIT_TIME and len(state["last_text"]) > 0:
-            print(f"USER: {state['last_text']}")
-            # Generate response using the chatbot
-            ai_response = chatbot.generate_response(state["last_text"])
-            print(f"AI: {ai_response}")
+                # Speak the AI's response
+                speak(ai_response)
 
-            # Speak the AI's response
-            speak(ai_response)
+                # Reset transcription cache and keep transcribing
+                transcriber.reset_transcription_cache()
+                state["last_text"] = ""
 
-            # Reset transcription cache and keep transcribing
-            transcriber.reset_transcription_cache()
-            state["last_text"] = ""
+        # Transcription processing is paused while the AI response is being generated, continue now
+        return (in_data, pa.paContinue)
 
-    # Transcription processing is paused while the AI response is being generated, continue now
-    return (in_data, pa.paContinue)
+    return callback
 
 
 def main():
@@ -76,7 +78,7 @@ def main():
         rate=SAMPLE_RATE,
         input=True,
         input_device_index=dev_idx,
-        stream_callback=callback,
+        stream_callback=build_stream_callback(),
         frames_per_buffer=int(SAMPLE_RATE * CHUNK_SIZE / 1000) - 1,
     )
 
