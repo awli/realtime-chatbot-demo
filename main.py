@@ -51,16 +51,20 @@ def callback(in_data, *_):
     return (in_data, pa.paContinue)
 
 
-p = pa.PyAudio()
-print("Available audio input devices:")
-input_devices = []
-for i in range(p.get_device_count()):
-    dev = p.get_device_info_by_index(i)
-    if dev.get("maxInputChannels"):
-        input_devices.append(i)
-        print(i, dev.get("name"))
+def main():
+    p = pa.PyAudio()
+    print("Available audio input devices:")
+    input_devices = []
+    for i in range(p.get_device_count()):
+        dev = p.get_device_info_by_index(i)
+        if dev.get("maxInputChannels"):
+            input_devices.append(i)
+            print(i, dev.get("name"))
 
-if len(input_devices):
+    if len(input_devices) == 0:
+        print("ERROR: No audio input device found.")
+        return
+
     dev_idx = -2
     while dev_idx not in input_devices:
         print("Please type input device ID:")
@@ -90,5 +94,7 @@ if len(input_devices):
 
         print()
         print("PyAudio stopped")
-else:
-    print("ERROR: No audio input device found.")
+
+
+if __name__ == "__main__":
+    main()
