@@ -1,5 +1,6 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 import os
+from typing import Tuple
 
 from dotenv import load_dotenv
 from elevenlabs import play
@@ -45,58 +46,61 @@ ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 el_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 
-def speak(text):
-    try:
-        audio = el_client.generate(
-            text=text, voice=ELEVENLABS_VOICE_ID, model="eleven_monolingual_v1"
-        )
-        play(audio)
-    except Exception as e:
-        print(f"Error in text-to-speech: {str(e)}")
-
-
 class SalesChatbot:
     def __init__(self):
         self.executor = ThreadPoolExecutor(max_workers=5)
         self.conversation_history = [
             {"role": "system", "content": NOOKS_ASSISTANT_PROMPT}
         ]
-        self.next_user_line = None
-        self.forecast_future = None
+        self.candidate_user_line: str | None = None
+        self.forecast_future: Future | None = None
+        self.last_assistant_audio: bytes | None = None
 
-    def _generate_response(self, conversation_history):
+    @property
+    def last_assistant_response(self) -> str:
+        return self.conversation_history[-1]["content"]
+
+    def _forecast_text_and_audio(self, conversation_history) -> Tuple[str, bytes]:
         response = client.chat.completions.create(
             model="gpt-4", messages=conversation_history
         )
         ai_response = response.choices[0].message.content
         print("response: ", ai_response)
-        return ai_response
+        audio = el_client.generate(
+            text=ai_response, voice=ELEVENLABS_VOICE_ID, model="eleven_monolingual_v1"
+        )
+        print("got audio for response: ", ai_response)
+        return ai_response, audio
 
     def propose_next_user_line(self, user_input) -> None:
         print("proposed: ", user_input)
         if self.forecast_future:
             self.forecast_future.cancel()
-        self.next_user_line = user_input
+        self.candidate_user_line = user_input
 
         self.forecast_future = self.executor.submit(
-            self._generate_response,
+            self._forecast_text_and_audio,
             self.conversation_history + [{"role": "user", "content": user_input}],
         )
 
-    def commit_next_user_line(self) -> str:
-        assert self.next_user_line is not None
-        ai_response = self.forecast_future.result()
+    def commit(self) -> str:
+        assert self.candidate_user_line is not None
+        ai_response, audio = self.forecast_future.result()
         self.conversation_history.extend(
             [
-                {"role": "user", "content": self.next_user_line},
+                {"role": "user", "content": self.candidate_user_line},
                 {"role": "assistant", "content": ai_response},
             ]
         )
-        self.next_user_line = None
-        return ai_response
+        self.last_assistant_audio = audio
+        self.candidate_user_line = None
+        return self.last_assistant_response
 
-    def get_conversation_history(self):
-        return self.conversation_history
+    def speak_last_assistant_response(self) -> None:
+        try:
+            play(self.last_assistant_audio)
+        except Exception as e:
+            print(f"Error in text-to-speech: {str(e)}")
 
 
 # Get API key from environment

@@ -3,7 +3,7 @@ import os
 import time
 import pyaudio as pa
 import numpy as np
-from packages.sales_chatbot import SalesChatbot, speak
+from packages.sales_chatbot import SalesChatbot
 from packages.nemo_stt import (
     StreamingTranscription,
 )  # Update the class name if different
@@ -37,11 +37,12 @@ def build_stream_callback():
             if state["silence_duration"] >= WAIT_TIME and len(state["last_text"]) > 0:
                 print(f"USER: {state['last_text']}")
                 # Generate response using the chatbot
-                ai_response = chatbot.commit_next_user_line()
+                chatbot.commit()
+                ai_response = chatbot.last_assistant_response
                 print(f"AI: {ai_response}")
 
                 # Speak the AI's response
-                speak(ai_response)
+                chatbot.speak_last_assistant_response()
 
                 # Reset transcription cache and keep transcribing
                 transcriber.reset_transcription_cache()
