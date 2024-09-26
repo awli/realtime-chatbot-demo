@@ -1,6 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
+
 from dotenv import load_dotenv
+from elevenlabs import play
+from elevenlabs.client import ElevenLabs
 from openai import OpenAI
 
 # Load environment variables
@@ -37,6 +40,19 @@ When answering questions:
 Remember to be helpful and courteous at all times, and prioritize the customer's needs and concerns. Be extremely concise and to the point. 
 Answer in exactly 1 sentence, no more. Do not use more than 20 words. Only directly answer questions that have been asked. Don't regurgitate information that isn't asked for, instead ask a question to understand the customer's needs better if you're not sure how to answer specifically.
 """
+
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+el_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+
+def speak(text):
+    try:
+        audio = el_client.generate(
+            text=text, voice=ELEVENLABS_VOICE_ID, model="eleven_monolingual_v1"
+        )
+        play(audio)
+    except Exception as e:
+        print(f"Error in text-to-speech: {str(e)}")
 
 
 class SalesChatbot:
@@ -81,3 +97,8 @@ class SalesChatbot:
 
     def get_conversation_history(self):
         return self.conversation_history
+
+
+# Get API key from environment
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # Default voice, you can change this

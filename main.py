@@ -3,11 +3,10 @@ import os
 import time
 import pyaudio as pa
 import numpy as np
-from packages.sales_chatbot import SalesChatbot
+from packages.sales_chatbot import SalesChatbot, speak
 from packages.nemo_stt import (
     StreamingTranscription,
 )  # Update the class name if different
-from packages.elevenlabs_tts import speak  # Update the class name if different
 
 
 SAMPLE_RATE = 16000
