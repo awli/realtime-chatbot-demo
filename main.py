@@ -30,6 +30,7 @@ def build_stream_callback():
         if text != state["last_text"]:
             state["last_text"] = text
             state["silence_duration"] = 0
+            chatbot.propose_next_user_line(text)
         else:
             state["silence_duration"] += CHUNK_SIZE / 2
 
@@ -37,7 +38,7 @@ def build_stream_callback():
             if state["silence_duration"] >= WAIT_TIME and len(state["last_text"]) > 0:
                 print(f"USER: {state['last_text']}")
                 # Generate response using the chatbot
-                ai_response = chatbot.generate_response(state["last_text"])
+                ai_response = chatbot.commit_next_user_line()
                 print(f"AI: {ai_response}")
 
                 # Speak the AI's response

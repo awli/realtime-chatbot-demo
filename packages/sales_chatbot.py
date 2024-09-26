@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -40,20 +41,42 @@ Answer in exactly 1 sentence, no more. Do not use more than 20 words. Only direc
 
 class SalesChatbot:
     def __init__(self):
+        self.executor = ThreadPoolExecutor(max_workers=5)
         self.conversation_history = [
             {"role": "system", "content": NOOKS_ASSISTANT_PROMPT}
         ]
+        self.next_user_line = None
+        self.forecast_future = None
 
-    def generate_response(self, user_input):
-        self.conversation_history.append({"role": "user", "content": user_input})
-
+    def _generate_response(self, conversation_history):
         response = client.chat.completions.create(
-            model="gpt-4", messages=self.conversation_history
+            model="gpt-4", messages=conversation_history
+        )
+        ai_response = response.choices[0].message.content
+        print("response: ", ai_response)
+        return ai_response
+
+    def propose_next_user_line(self, user_input) -> None:
+        print("proposed: ", user_input)
+        if self.forecast_future:
+            self.forecast_future.cancel()
+        self.next_user_line = user_input
+
+        self.forecast_future = self.executor.submit(
+            self._generate_response,
+            self.conversation_history + [{"role": "user", "content": user_input}],
         )
 
-        ai_response = response.choices[0].message.content
-        self.conversation_history.append({"role": "assistant", "content": ai_response})
-
+    def commit_next_user_line(self) -> str:
+        assert self.next_user_line is not None
+        ai_response = self.forecast_future.result()
+        self.conversation_history.extend(
+            [
+                {"role": "user", "content": self.next_user_line},
+                {"role": "assistant", "content": ai_response},
+            ]
+        )
+        self.next_user_line = None
         return ai_response
 
     def get_conversation_history(self):
