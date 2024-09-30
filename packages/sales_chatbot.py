@@ -51,13 +51,13 @@ el_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 class SalesChatbot:
     def __init__(self):
-        self.executor = ThreadPoolExecutor(max_workers=5)
+        self.executor = ThreadPoolExecutor(max_workers=20)
         self.conversation_history = [
             {"role": "system", "content": NOOKS_ASSISTANT_PROMPT}
         ]
         self.candidate_user_line: str | None = None
         self.forecast_future: Future | None = None
-        self.last_assistant_audio: bytes | None = None
+        self.last_assistant_audio: list[bytes] | None = None
 
     @property
     def last_assistant_response(self) -> str:
@@ -68,7 +68,6 @@ class SalesChatbot:
             model="gpt-4", messages=conversation_history
         )
         ai_response = response.choices[0].message.content
-        print("response: ", ai_response)
         audio = list(
             el_client.generate(
                 text=ai_response,
@@ -77,11 +76,9 @@ class SalesChatbot:
                 stream=True,
             )
         )
-        print("got audio for response: ", ai_response)
         return ai_response, audio
 
     def propose_next_user_line(self, user_input) -> None:
-        print("proposed: ", user_input)
         if self.forecast_future:
             self.forecast_future.cancel()
         self.candidate_user_line = user_input
