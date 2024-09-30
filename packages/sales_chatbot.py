@@ -3,7 +3,7 @@ import os
 from typing import Tuple
 
 from dotenv import load_dotenv
-from elevenlabs import play
+from elevenlabs import stream
 from elevenlabs.client import ElevenLabs
 from openai import OpenAI
 
@@ -69,8 +69,13 @@ class SalesChatbot:
         )
         ai_response = response.choices[0].message.content
         print("response: ", ai_response)
-        audio = el_client.generate(
-            text=ai_response, voice=ELEVENLABS_VOICE_ID, model="eleven_monolingual_v1"
+        audio = list(
+            el_client.generate(
+                text=ai_response,
+                voice=ELEVENLABS_VOICE_ID,
+                model="eleven_monolingual_v1",
+                stream=True,
+            )
         )
         print("got audio for response: ", ai_response)
         return ai_response, audio
@@ -101,6 +106,6 @@ class SalesChatbot:
 
     def speak_last_assistant_response(self) -> None:
         try:
-            play(self.last_assistant_audio)
+            stream(iter(self.last_assistant_audio))
         except Exception as e:
             print(f"Error in text-to-speech: {str(e)}")
